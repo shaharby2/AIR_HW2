@@ -20,7 +20,7 @@ class RRTPlanner(object):
         '''
         start_time = time.time()
 
-        # initialize an empty plan.
+        # initialize an empty plan.dd
         plan = []
 
         # TODO: Task 3
