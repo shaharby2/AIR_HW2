@@ -13,7 +13,7 @@ import imageio
 
 class MapEnvironment(object):
     
-    def __init__(self, json_file):
+    def __init__(self, json_file, planner_type):
 
         # check if json file exists and load
         json_path = os.path.join(os.getcwd(), json_file)
@@ -28,6 +28,7 @@ class MapEnvironment(object):
         self.start = np.array(json_dict['START'])
         self.goal = np.array(json_dict['GOAL'])
         self.load_obstacles(obstacles=json_dict['OBSTACLES'])
+        self.planner_type = planner_type
 
         # check that the start location is within limits and collision free
         if not self.state_validity_checker(state=self.start):
@@ -150,11 +151,17 @@ class MapEnvironment(object):
         # add goal or inspection points
         plt = self.visualize_point_location(plt=plt, state=self.goal, color='g')
 
+        # added for
+        num_steps = len(plan) if plan is not None else 0
+        plt.suptitle(f"Path Planning Visualization\nPlanner: {self.planner_type}", fontsize=16)
+        plt.title(f"Start: {self.start}, Goal: {self.goal}, Steps: {num_steps}", fontsize=12)
+        plt.tight_layout()
+
         # show map
         if show_map:
             plt.show()
         else:
-            plt.savefig('map.png')
+            plt.savefig('out/map.png')
 
         return plt
 

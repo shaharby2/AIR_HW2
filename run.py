@@ -16,7 +16,7 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     # prepare the map
-    planning_env = MapEnvironment(json_file=args.map)
+    planning_env = MapEnvironment(json_file=args.map, planner_type = args.planner)
 
     # set up the planner
     if args.planner == 'rcs':
