@@ -14,91 +14,62 @@ class RRTPlanner(object):
         # set search params
         self.ext_mode = ext_mode
         self.goal_prob = goal_prob
+        self.num_of_iter = 1000
+        self.term = "path_exist"
 
-    def find_path(self):
-        """
-        path_start/goal = states that exist on the tree
-        :return: returns the shortest path available if exists
-        """
-
-        path = []
-        path_state = []
-
-        start = self.planning_env.start
-        goal = self.planning_env.goal
-
-        goal_vid = self.tree.get_idx_for_state(goal)
-        if self.tree.get_idx_for_state(goal) is None:
-            # print("here :(")
-            return None
-
-        path.append(self.tree.vertices[goal_vid])
-        current_vid = goal_vid
-        while (not np.array_equal(path[-1].state, start)) and current_vid is not None:
-            # print(f" path[-1].state = {path[-1].state} , start = {start}")
-            vid_parent = self.tree.edges[current_vid]
-            path.append(self.tree.vertices[vid_parent])
-            # print(f"vid_parent {self.tree.vertices[vid_parent].state}")
-            current_vid = vid_parent
-
-        # path_state = [vertex.state for vertex in path]
-        return path[::-1]
+    def shortest_way(self):
+        way = []
+        end = self.planning_env.goal
+        end_idx = self.tree.get_idx_for_state(end)
+        begin = self.planning_env.start
+        if self.tree.get_idx_for_state(end) is not None:
+            curr_idx = end_idx
+            way.append(self.tree.vertices[end_idx])
+            while curr_idx is not None and not np.array_equal(way[-1].state, begin):
+                way.append(self.tree.vertices[self.tree.edges[curr_idx]])
+                curr_idx = self.tree.edges[curr_idx]
+            return list(reversed(way))
+        return None
 
     def plan(self):
         '''
         Compute and return the plan. The function should return a numpy array containing the states (positions) of the robot.
         '''
-        start_time = time.time()
-
-        # initialize an empty plan.
-        plan = []
-
-        # initialize tree
+        begin = time.time()
         self.tree.add_vertex(self.planning_env.start)
-        # first let's build the rrt tree
-        if (self.algo_termination == 'path_exist'):
-            while (self.find_path() is None):
-                x_rand = self.sample_random_state()
-                _,x_near = self.tree.get_nearest_state(x_rand)
-                x_new = self.extend(x_near, x_rand)
-                if (self.planning_env.edge_validity_checker(x_near,x_new) and self.tree.get_idx_for_state(x_rand) is None):
-                    self.tree.add_vertex(x_new)
-                    idx_x_near = self.tree.get_idx_for_state(x_near)
-                    idx_x_new = self.tree.get_idx_for_state(x_new)
-                    edge_cost = self.planning_env.compute_distance(x_new,x_near)
-                    self.tree.add_edge(idx_x_near,idx_x_new,edge_cost)
-        elif (self.algo_termination == 'epoch_time'):
-            for i in range (1,self.n_iteration):
-                x_rand = self.sample_random_state()
-                _,x_near = self.tree.get_nearest_state(x_rand)
-                x_new = self.extend(x_near, x_rand)
-                if (self.planning_env.edge_validity_checker(x_near,x_new) and self.tree.get_idx_for_state(x_rand) is None):
-                    self.tree.add_vertex(x_new)
-                    idx_x_near = self.tree.get_idx_for_state(x_near)
-                    idx_x_new = self.tree.get_idx_for_state(x_new)
-                    edge_cost = self.planning_env.compute_distance(x_new,x_near)
-                    self.tree.add_edge(idx_x_near,idx_x_new,edge_cost)
-            print(f"path returned is : {self.find_path()}")
+        if not self.term == 'path_exist':
+            for j in range(1, self.num_of_iter):
+                random_x = self.get_rand()
+                _, close_x = self.tree.get_nearest_state(random_x)
+                new_x = self.extend(close_x, random_x)
+                if self.tree.get_idx_for_state(random_x) is None and self.planning_env.edge_validity_checker(close_x,new_x):
+                    self.tree.add_vertex(new_x)
+                    self.tree.add_edge(self.tree.get_idx_for_state(close_x),self.tree.get_idx_for_state(new_x),self.planning_env.compute_distance(new_x,close_x))
+        else:
+            while self.shortest_way() is None:
+                random_x = self.get_rand()
+                _, close_x = self.tree.get_nearest_state(random_x)
+                new_x = self.extend(close_x, random_x)
+                if self.tree.get_idx_for_state(random_x) is None and self.planning_env.edge_validity_checker(close_x,
+                                                                                                             new_x):
+                    self.tree.add_vertex(new_x)
+                    self.tree.add_edge(self.tree.get_idx_for_state(close_x), self.tree.get_idx_for_state(new_x),
+                                       self.planning_env.compute_distance(new_x, close_x))
 
-
-        plan = self.find_path()
-
-        # print total path cost and time
-        cost = self.compute_cost(plan)
-        time_ = time.time()-start_time
-        print('Total cost of path: {:.2f}'.format(cost))
-        print('Total time: {:.2f}'.format(time_))
-        plan = [vertex.state for vertex in plan]
-        return time_,cost,np.array(plan)
+        print('cost: {:.2f}'.format(self.compute_cost(self.shortest_way())))
+        print('time: {:.2f}'.format(time.time()-begin))
+        final_plan = list(map(lambda vertex: vertex.state, self.shortest_way()))
+        return time.time()-begin, self.compute_cost(self.shortest_way()), np.array(final_plan)
 
     def compute_cost(self, plan):
         '''
         Compute and return the plan cost, which is the sum of the distances between steps.
         @param plan A given plan for the robot.
         '''
-        if (plan is None):
-            return 0
-        return plan[-1].cost
+        if (plan is not None):
+            return plan[-1].cost
+        return 0
+
 
     def extend(self, near_state, rand_state):
         '''
@@ -106,51 +77,24 @@ class RRTPlanner(object):
         @param near_state The nearest position to the sampled position.
         @param rand_state The sampled position.
         '''
+        if (self.ext_mode == 'E2'):
+            way_len = np.linalg.norm(rand_state - near_state)
+            param_etha = 15
+            if not param_etha > way_len:
+                return near_state + param_etha * (rand_state - near_state) / np.linalg.norm(rand_state - near_state)
+            return rand_state
 
         if(self.ext_mode == 'E1'):
             return rand_state
 
-        if (self.ext_mode == 'E2'):
-            etha = ((self.planning_env.xlimit[1]+self.planning_env.ylimit[1])/2)/50
 
-            # print(f"near_state {near_state}")
-            # print(f"rand_state {rand_state}")
-
-            path_length = np.linalg.norm(rand_state - near_state)
-            if(etha > path_length):
-                return rand_state
-
-            # Calculate the direction vector from A to B
-            direction = rand_state - near_state
-            # Normalize the direction vector
-            direction = direction / np.linalg.norm(direction)
-            # Calculate the new point along the line
-            new_point = near_state + etha * direction
-            return new_point
-
-    def sample_random_state(self):
-
-        random_state_choose = random.uniform(0, 100)
-        random_state_choose = random_state_choose / 100
-
-        if (random_state_choose < self.bias):
-            return self.planning_env.goal
+    def get_rand(self):
+        if not self.goal_prob > random.uniform(0, 100) / 100:
+            position = np.array(
+                [random.uniform(0, self.planning_env.xlimit[1]), random.uniform(0, self.planning_env.ylimit[1])])
+            while (self.planning_env.state_validity_checker(position) == False):
+                position = np.array(
+                    [random.uniform(0, self.planning_env.xlimit[1]), random.uniform(0, self.planning_env.ylimit[1])])
+            return position
         else:
-            X_x = self.planning_env.xlimit[1]
-            X_y = self.planning_env.ylimit[1]
-
-            rand_state_x = random.uniform(0, X_x)
-            rand_state_y = random.uniform(0, X_y)
-
-            state = np.array([rand_state_x, rand_state_y])
-
-            while (self.planning_env.state_validity_checker(state) == False):
-                X_x = self.planning_env.xlimit[1]
-                X_y = self.planning_env.ylimit[1]
-
-                rand_state_x = random.uniform(0, X_x)
-                rand_state_y = random.uniform(0, X_y)
-
-                state = np.array([rand_state_x, rand_state_y])
-
-            return state
+            return self.planning_env.goal

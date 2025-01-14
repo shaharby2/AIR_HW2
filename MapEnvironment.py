@@ -119,7 +119,7 @@ class MapEnvironment(object):
     # Visualization Functions
     # ------------------------#
 
-    def visualize_map(self, show_map=False, plan=None, tree_edges=None, expanded_nodes=None):
+    def visualize_map(self, show_map=True, plan=None, tree_edges=None, expanded_nodes=None):
         '''
         Visualize map with current state of robot and obstacles in the map.
         @param show_map If to show the map or save it.
@@ -197,7 +197,7 @@ class MapEnvironment(object):
         '''
         # add plan edges to the plt
         for i in range(0, len(plan)-1):
-            plt.plot([plan[i,0],plan[i+1,0]], [plan[i,1],plan[i+1,1]], color=color, linewidth=1, zorder=20)
+            plt.plot([plan[2][i,0],plan[2][i+1,0]], [plan[2][i,1],plan[2][i+1,1]], color=color, linewidth=1, zorder=20)
 
         return plt 
 
