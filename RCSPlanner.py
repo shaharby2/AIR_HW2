@@ -113,13 +113,27 @@ class RCSPlanner(object):
         # YOU DON'T HAVE TO USE THIS FUNCTION!!!
         '''
         path = []
+        big_steps = 0
+        small_steps = 0
+        total_length = 0.0
         while node:
-            path.append(node.state)  # Append the state
-            node = node.parent  # Move to the parent
+            path.append(tuple(node.state))
+            if node.resolution == 'coarse':
+                big_steps += 1
+            elif node.resolution == 'fine':
+                small_steps += 1
+            if node.parent:
+                total_length += np.linalg.norm(node.state - node.parent.state)
+            node = node.parent
+
         path.reverse()
-        print(path)
+        formatted_path = " -> ".join(map(str, path))
+        print(f"Path: {formatted_path}")
+        print(f"Total length: {total_length}")
+        print(f"Total big steps (coarse): {big_steps}, {big_steps / (big_steps + small_steps) * 100:.2f}% of the path" )
+        print(f"Total small steps (fine): {small_steps}, {small_steps / (big_steps + small_steps) * 100:.2f}% of the path" )
         return np.array(path)
-    
+
     def get_expanded_nodes(self):
         '''
         Return list of expanded nodes without duplicates.

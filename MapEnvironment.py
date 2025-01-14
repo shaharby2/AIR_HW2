@@ -153,7 +153,7 @@ class MapEnvironment(object):
 
         # added for
         num_steps = len(plan) if plan is not None else 0
-        plt.suptitle(f"Path Planning Visualization\nPlanner: {self.planner_type}", fontsize=16)
+        plt.suptitle(f"Planner: {self.planner_type} Results Visualization", fontsize=16)
         plt.title(f"Start: {self.start}, Goal: {self.goal}, Steps: {num_steps}", fontsize=12)
         plt.tight_layout()
 
