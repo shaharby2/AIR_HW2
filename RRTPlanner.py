@@ -35,6 +35,7 @@ class RRTPlanner(object):
         '''
         Compute and return the plan. The function should return a numpy array containing the states (positions) of the robot.
         '''
+        ''
         begin = time.time()
         self.tree.add_vertex(self.planning_env.start)
         if not self.term == 'path_exist':
