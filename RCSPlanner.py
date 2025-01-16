@@ -3,7 +3,7 @@ from typing import Optional
 import heapq
 
 
-class RCSPlanner(object):    
+class RCSPlanner(object):
     def __init__(self, planning_env):
         self.planning_env = planning_env
 
@@ -13,24 +13,19 @@ class RCSPlanner(object):
 
     def plan(self):
         '''
-        Compute and return the plan as a numpy array of (x,y) states.
+        Compute and return the plan. The function should return a numpy array containing the states (positions) of the robot.
         '''
 
-        # -- 1) Define coarse and fine action sets --
         coarse_actions = [(2, 0), (-2, 0), (0, 2), (0, -2),
                           (2, 2), (2, -2), (-2, 2), (-2, -2)]
         fine_actions = [(1, 0), (-1, 0), (0, 1), (0, -1),
                         (1, 1), (1, -1), (-1, 1), (-1, -1)]
 
-        # -- 2) Initialize root node --
         start_state = self.planning_env.start
         root_node = Node(state=start_state, rank=0, resolution='coarse', parent=None)
 
-        # Priority queue (min-heap) for the OPEN list, sorted by rank
-        # Each entry will be (rank, unique_id, node).
-        # The 'unique_id' can just be a counter to avoid ties in the heap.
         open_list = []
-        counter = 0  # increments every time we push into the heap
+        counter = 0  # pushing into the heap
 
         # Put root node in OPEN
         heapq.heappush(open_list, (root_node.rank, counter, root_node))
@@ -39,25 +34,21 @@ class RCSPlanner(object):
         # CLOSED set to store states we have already visited
         closed_set = set()
 
-        # -- 3) RCS main loop --
+        # -- RCS main loop --
         while len(open_list) > 0:
-            # Extract node with minimal rank
-            _, _, current_node = heapq.heappop(open_list)
-
-            # Check if current node's state is valid
+            _, _, current_node = heapq.heappop(open_list)  # extract minimal rank node
+            #  current node's state validity
             if not self.planning_env.state_validity_checker(current_node.state):
                 continue
 
-            # Check for duplicates
-            state_tuple = tuple(current_node.state)
+            state_tuple = tuple(current_node.state)  # check for duplicates
             if state_tuple in closed_set:
                 continue
 
-            # Mark visited
-            closed_set.add(state_tuple)
+            closed_set.add(state_tuple)  # mark visited
             self.expanded_nodes.append(current_node.state)
 
-            # Check if we have reached the goal
+            # check if we have reached the goal
             if np.allclose(current_node.state, self.planning_env.goal):
                 return self.reconstruct_path(current_node)
 
@@ -79,8 +70,7 @@ class RCSPlanner(object):
                 heapq.heappush(open_list, (new_node.rank, counter, new_node))
                 counter += 1
 
-            # 3b) Fine expansions from the *parent* if resolution = coarse (and not root)
-            #     as per the pseudocode:
+            # 3b)  as per the pseudocode:
             #
             #     If v != root AND v.resolution = coarse:
             #         For each action in fineSet:
@@ -94,18 +84,12 @@ class RCSPlanner(object):
                     if not self.planning_env.edge_validity_checker(parent_node.state, new_state):
                         continue
 
-                    new_node = Node(
-                        state=new_state,
-                        rank=current_node.rank + 1,
-                        resolution='fine',
-                        parent=parent_node
-                    )
+                    new_node = Node(state=new_state, rank=current_node.rank + 1,
+                        resolution='fine', parent=parent_node)
 
                     heapq.heappush(open_list, (new_node.rank, counter, new_node))
                     counter += 1
 
-        # If we exhaust OPEN without finding a goal, return empty
-        return np.array([])
 
     def reconstruct_path(self, node):
         '''
@@ -130,8 +114,9 @@ class RCSPlanner(object):
         formatted_path = " -> ".join(map(str, path))
         print(f"Path: {formatted_path}")
         print(f"Total length: {total_length}")
-        print(f"Total big steps (coarse): {big_steps}, {big_steps / (big_steps + small_steps) * 100:.2f}% of the path" )
-        print(f"Total small steps (fine): {small_steps}, {small_steps / (big_steps + small_steps) * 100:.2f}% of the path" )
+        print(f"Total big steps (coarse): {big_steps}, {big_steps / (big_steps + small_steps) * 100:.2f}% of the path")
+        print(
+            f"Total small steps (fine): {small_steps}, {small_steps / (big_steps + small_steps) * 100:.2f}% of the path")
         return np.array(path)
 
     def get_expanded_nodes(self):
@@ -142,6 +127,7 @@ class RCSPlanner(object):
 
         # used for visualizing the expanded nodes
         return self.expanded_nodes
+
 
 class Node:
     def __init__(self, state: tuple[int, int], rank: int, resolution: str, parent: Optional['Node'] = None):

@@ -195,11 +195,27 @@ class MapEnvironment(object):
         @param plan The requested sequence of steps.
         @param color The requested color for the plan.
         '''
-        # add plan edges to the plt
-        for i in range(0, len(plan)-1):
-            plt.plot([plan[2][i,0],plan[2][i+1,0]], [plan[2][i,1],plan[2][i+1,1]], color=color, linewidth=1, zorder=20)
+        # Check for empty plan
+        if plan is None or len(plan) < 2:
+            print("Plan is empty or has insufficient waypoints. Skipping plan visualization.")
+            return plt
 
-        return plt 
+        # Ensure plan is 2D
+        plan = np.array(plan)
+        if plan.ndim != 2 or plan.shape[1] != 2:
+            raise ValueError("Plan should be a 2D array with shape (N, 2).")
+
+        # Draw edges
+        for i in range(len(plan) - 1):
+            plt.plot(
+                [plan[i, 0], plan[i + 1, 0]],
+                [plan[i, 1], plan[i + 1, 1]],
+                color=color,
+                linewidth=1,
+                zorder=20,
+            )
+
+        return plt
 
     def visualize_tree_edges(self, plt, tree_edges, color):
         '''
